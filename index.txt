@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Từ Điển Anh-Việt Thông Minh</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f8fafc;
+        }
+        .glass-morphism {
+            background: rgba(255, 255, 255, 0.9);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        .search-shadow {
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+        }
+        .loading-spinner {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #3b82f6;
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .image-container {
+            width: 100%;
+            height: 200px; /* Cố định chiều cao cho khung ảnh nhỏ */
+            background-color: #f1f5f9;
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            border-radius: 1rem;
+        }
+        .image-skeleton {
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(90deg, #f1f5f9 25%, #e2e8f0 50%, #f1f5f9 75%);
+            background-size: 200% 100%;
+            animation: shimmer 1.5s infinite;
+        }
+        @keyframes shimmer {
+            0% { background-position: 200% 0; }
+            100% { background-position: -200% 0; }
+        }
+        @media (min-width: 768px) {
+            .image-container {
+                height: 100%; /* Tự động theo chiều cao cột văn bản trên desktop */
+                min-height: 220px;
+            }
+        }
+    </style>
+</head>
+<body class="min-h-screen py-8 px-4">
+    <div class="max-w-4xl mx-auto"> <!-- Tăng chiều rộng tối đa để phù hợp bố cục ngang -->
+        <!-- Header -->
+        <header class="text-center mb-8">
+            <h1 class="text-3xl font-bold text-gray-800 mb-2">Từ Điển Anh-Việt AI</h1>
+            <p class="text-gray-500">Học từ vựng trực quan với hình ảnh minh họa</p>
+        </header>
+
+        <!-- Search Box -->
+        <div class="relative mb-8 max-w-2xl mx-auto">
+            <div class="flex items-center glass-morphism rounded-2xl p-2 search-shadow border border-blue-100 focus-within:ring-2 ring-blue-400 transition-all">
+                <input type="text" id="searchInput" placeholder="Nhập từ cần tra (ví dụ: Astronaut, Forest...)" 
+                    class="w-full bg-transparent border-none focus:outline-none px-4 py-3 text-lg text-gray-700">
+                <button id="searchBtn" class="bg-blue-600 hover:bg-blue-700 text-white p-3 rounded-xl transition-colors flex items-center justify-center min-w-[50px]">
+                    <i class="fas fa-search" id="searchIcon"></i>
+                    <div id="loader" class="loading-spinner hidden"></div>
+                </button>
+            </div>
+        </div>
+
+        <!-- Result Section -->
+        <div id="resultArea" class="hidden animate-fade-in space-y-6">
+            
+            <div class="grid grid-cols-1 md:grid-cols-12 gap-6 items-stretch">
+                <!-- Image Card (Chiếm 5/12 cột trên desktop) -->
+                <div class="md:col-span-5 glass-morphism rounded-3xl p-3 shadow-sm border border-gray-100 flex flex-col justify-center">
+                    <div class="image-container" id="imageWrapper">
+                        <div id="imageSkeleton" class="image-skeleton hidden"></div>
+                        <img id="resImage" src="" alt="Minh họa" class="w-full h-full object-cover rounded-xl hidden">
+                        <div id="imagePlaceholder" class="text-gray-300 flex flex-col items-center p-4 text-center">
+                            <i class="far fa-image text-4xl mb-2"></i>
+                            <p class="text-xs">Đang tạo hình ảnh minh họa...</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Word Card (Chiếm 7/12 cột trên desktop) -->
+                <div class="md:col-span-7 glass-morphism rounded-3xl p-6 shadow-sm border border-gray-100 flex flex-col justify-center">
+                    <div>
+                        <h2 id="resWord" class="text-3xl md:text-4xl font-extrabold text-gray-900 mb-2">Word</h2>
+                        <div class="flex flex-wrap gap-3 mt-3">
+                            <div class="flex items-center space-x-2 bg-blue-50 px-3 py-1 rounded-full border border-blue-100">
+                                <span class="text-[10px] font-bold text-blue-600 uppercase tracking-tighter">UK</span>
+                                <span id="resPhoneticUK" class="text-sm text-gray-600 font-medium">/phonetic/</span>
+                                <button onclick="playAudio('UK')" class="text-blue-600 hover:text-blue-800 transition-transform active:scale-90">
+                                    <i class="fas fa-volume-up text-xs"></i>
+                                </button>
+                            </div>
+                            <div class="flex items-center space-x-2 bg-red-50 px-3 py-1 rounded-full border border-red-100">
+                                <span class="text-[10px] font-bold text-red-600 uppercase tracking-tighter">US</span>
+                                <span id="resPhoneticUS" class="text-sm text-gray-600 font-medium">/phonetic/</span>
+                                <button onclick="playAudio('US')" class="text-red-600 hover:text-red-800 transition-transform active:scale-90">
+                                    <i class="fas fa-volume-up text-xs"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="mt-6">
+                            <h3 class="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-2">Nghĩa tiếng Việt</h3>
+                            <div id="resMeaning" class="text-lg text-gray-800 font-medium leading-snug bg-blue-50/30 p-3 rounded-xl border border-blue-50">
+                                -
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Bottom Content (Examples) -->
+            <div class="glass-morphism rounded-3xl p-6 shadow-sm border border-gray-100">
+                <section id="resContextArea">
+                    <h3 class="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-4">Ví dụ & Ngữ cảnh</h3>
+                    <div id="resExamples" class="grid grid-cols-1 md:grid-cols-2 gap-4 italic text-gray-600">
+                        <!-- Examples will be injected here -->
+                    </div>
+                </section>
+            </div>
+        </div>
+
+        <!-- Empty State / Welcome -->
+        <div id="emptyState" class="text-center py-20 opacity-40">
+            <i class="fas fa-brain text-6xl text-gray-300 mb-4"></i>
+            <p class="text-lg">Nhập từ vựng để thấy sự kết hợp giữa ngôn ngữ và hình ảnh</p>
+        </div>
+
+        <!-- Error State -->
+        <div id="errorArea" class="hidden bg-red-50 text-red-600 p-4 rounded-xl border border-red-100 text-center mt-4">
+            <p id="errorMsg">Đã có lỗi xảy ra. Vui lòng thử lại.</p>
+        </div>
+    </div>
+
+    <script type="module">
+        const apiKey = ""; // API Key provided by system
+        
+        const searchInput = document.getElementById('searchInput');
+        const searchBtn = document.getElementById('searchBtn');
+        const searchIcon = document.getElementById('searchIcon');
+        const loader = document.getElementById('loader');
+        const resultArea = document.getElementById('resultArea');
+        const emptyState = document.getElementById('emptyState');
+        const errorArea = document.getElementById('errorArea');
+
+        const resWord = document.getElementById('resWord');
+        const resPhoneticUK = document.getElementById('resPhoneticUK');
+        const resPhoneticUS = document.getElementById('resPhoneticUS');
+        const resMeaning = document.getElementById('resMeaning');
+        const resExamples = document.getElementById('resExamples');
+        const resImage = document.getElementById('resImage');
+        const imageSkeleton = document.getElementById('imageSkeleton');
+        const imagePlaceholder = document.getElementById('imagePlaceholder');
+
+        let currentWord = "";
+
+        const handleSearch = async () => {
+            const query = searchInput.value.trim();
+            if (!query) return;
+
+            setLoading(true);
+            errorArea.classList.add('hidden');
+            
+            resImage.classList.add('hidden');
+            imagePlaceholder.classList.remove('hidden');
+            imageSkeleton.classList.remove('hidden');
+
+            try {
+                const textPrompt = `Provide dictionary data for the English word: "${query}". 
+                Respond ONLY in JSON format with these keys: 
+                - word: (string)
+                - phonetic_uk: (string)
+                - phonetic_us: (string)
+                - vietnamese_meaning: (string)
+                - examples: (array of strings, english examples with vietnamese translation)`;
+
+                const textPromise = fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        contents: [{ parts: [{ text: textPrompt }] }],
+                        generationConfig: { responseMimeType: "application/json" }
+                    })
+                }).then(r => r.json());
+
+                const imagePrompt = `A clean, minimalist 3D isometric or high-quality photographic educational illustration for the word "${query}", studio lighting, plain background.`;
+                const imagePromise = fetch(`https://generativelanguage.googleapis.com/v1beta/models/imagen-4.0-generate-001:predict?key=${apiKey}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        instances: [{ prompt: imagePrompt }],
+                        parameters: { sampleCount: 1 }
+                    })
+                }).then(r => r.json());
+
+                const [textData, imageData] = await Promise.all([textPromise, imagePromise]);
+
+                const content = JSON.parse(textData.candidates[0].content.parts[0].text);
+                displayResult(content);
+
+                if (imageData.predictions && imageData.predictions[0].bytesBase64Encoded) {
+                    const base64Image = imageData.predictions[0].bytesBase64Encoded;
+                    resImage.src = `data:image/png;base64,${base64Image}`;
+                    resImage.onload = () => {
+                        resImage.classList.remove('hidden');
+                        imagePlaceholder.classList.add('hidden');
+                        imageSkeleton.classList.add('hidden');
+                    };
+                } else {
+                    imagePlaceholder.innerHTML = '<p class="text-xs text-gray-400">Không có ảnh</p>';
+                    imageSkeleton.classList.add('hidden');
+                }
+
+            } catch (err) {
+                console.error(err);
+                showError("Lỗi kết nối. Vui lòng thử lại.");
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        const displayResult = (data) => {
+            currentWord = data.word;
+            resWord.textContent = data.word;
+            resPhoneticUK.textContent = data.phonetic_uk || "/.../";
+            resPhoneticUS.textContent = data.phonetic_us || "/.../";
+            resMeaning.textContent = data.vietnamese_meaning;
+            
+            resExamples.innerHTML = data.examples.map(ex => `
+                <div class="bg-white/40 p-3 rounded-xl border border-gray-100">
+                    <p class="text-gray-800 text-sm font-medium">"${ex.split(' - ')[0] || ex}"</p>
+                    <p class="text-[13px] text-gray-500 mt-1">${ex.split(' - ')[1] || ''}</p>
+                </div>
+            `).join('');
+
+            resultArea.classList.remove('hidden');
+            emptyState.classList.add('hidden');
+        };
+
+        const setLoading = (isLoading) => {
+            if (isLoading) {
+                searchIcon.classList.add('hidden');
+                loader.classList.remove('hidden');
+                searchBtn.disabled = true;
+            } else {
+                searchIcon.classList.remove('hidden');
+                loader.classList.add('hidden');
+                searchBtn.disabled = false;
+            }
+        };
+
+        const showError = (msg) => {
+            errorArea.classList.remove('hidden');
+            document.getElementById('errorMsg').textContent = msg;
+            resultArea.classList.add('hidden');
+            emptyState.classList.add('hidden');
+        };
+
+        window.playAudio = (accent) => {
+            if (!currentWord) return;
+            const utterance = new SpeechSynthesisUtterance(currentWord);
+            utterance.lang = accent === 'UK' ? 'en-GB' : 'en-US';
+            utterance.rate = 0.85;
+            window.speechSynthesis.speak(utterance);
+        };
+
+        searchBtn.addEventListener('click', handleSearch);
+        searchInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') handleSearch();
+        });
+    </script>
+</body>
+</html>
